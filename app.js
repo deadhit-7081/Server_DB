@@ -3,6 +3,8 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var session = require('express-session');
+var FileStore = require('session-file-store')(session);
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -35,14 +37,25 @@ app.use(express.urlencoded({ extended: false }));
  the parameter here. The secret key could be any string there
  it's just a key that can be used by our cookie-parser in order to 
  encrypt the information and sign the cookie that is sent from the server to the client. */
-app.use(cookieParser('12345-67890-09876-54321'));
+//app.use(cookieParser('12345-67890-09876-54321'));
+
+//using session insted of signed cookie
+app.use(session({
+  name : 'session-id',
+  secret : '12345-67890-09876-54321',
+  saveUninitialized : false,
+  resave : false,
+  store : new FileStore()
+}));
+
 //Authentication Process
 
 function auth(req,res,next)
 {
-  console.log(req.signedCookies);//to see what is comming from client side
+  //session middleware will add session parameter to the request message
+  console.log(req.session);//to see what is comming from client side
 
-  if(!req.signedCookies.user/*user is a property of signed cookies*/)//if user is not authenticated by signed cookie yet then look for authorisation header
+  if(!req.session.user/*user is a property of signed cookies*/)//if user is not authenticated by signed cookie yet then look for authorisation header
   {
     var authHeader = req.headers.authorization;//getting hold of authorization header
     if(!authHeader)//if authHeader is null the we challenge the client
@@ -68,8 +81,7 @@ function auth(req,res,next)
   
       if(username === 'admin' && password === 'password')
       {
-        res.cookie('user' ,'admin',{signed : true});//setting up the cookie
-        /*Setting up the cookied as name 'user' and value 'admin' and making it as signed cookie */
+        req.session.user = 'admin';//setting user property on req session to user
         next();//next, this means that from the auth their request will passed on the next set of middleware here and then Express will try to match the specific request to middleware which will service the request 
       }
       else{
@@ -81,7 +93,7 @@ function auth(req,res,next)
   }
   else//if user already exists
   {
-    if(req.signedCookies.user === 'admin')
+    if(req.session.user === 'admin')
     {
       next();
     }

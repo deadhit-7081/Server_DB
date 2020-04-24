@@ -31,7 +31,48 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+//Authentication Process
+
+function auth(req,res,next)
+{
+  console.log(req.headers);//to see what is comming from client side
+
+  var authHeader = req.headers.authorization;//getting hold of authorization header
+  if(!authHeader)//if authHeader is null the we challenge the client
+  {
+    var err = new Error('You are not authenticated!');
+    res.setHeader('WWW-Authenticate','Basic');
+    err.status = 401;//un-authorize user
+    return next(err);//directly jumps to error handler and sends reply message back to client
+  }
+
+  //authHeader is string so we split the value and give encoding of buffer i.e base64
+/*[1] in below code means spliting the array into 2 parts ,1st contains basic and 2nd containf
+ username and pswd in base64 encoding formate*/
+ /*After we obtain username and pswd from second part if array and then we convert it into string
+  which is of formate username:pswd ,therefore we are again splitting it by colen to get seperate 
+  username and pswd*/
+  var auth = new Buffer(authHeader.split(' ')[1],'base64').toString().split(':');
+  //auth array contains two part username and pswd
+  var username = auth[0];
+  var password  = auth[1];
+
+  //using default value for user name and pswd
+
+  if(username === 'admin' && password === 'password')
+  {
+    next();//next, this means that from the auth their request will passed on the next set of middleware here and then Express will try to match the specific request to middleware which will service the request 
+  }
+  else{
+    var err = new Error('You are not authenticated!');
+    res.setHeader('WWW-Authenticate','Basic');
+    err.status = 401;//un-authorize user
+    return next(err);
+  }
+}
+app.use(auth);//auth function which is added
+
+app.use(express.static(path.join(__dirname, 'public')));//enable us to serve static data to public folder
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);

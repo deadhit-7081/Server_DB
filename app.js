@@ -5,6 +5,8 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var session = require('express-session');
 var FileStore = require('session-file-store')(session);
+var passport = require('passport');
+var suthenticate = require('./authenticate');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -48,6 +50,17 @@ app.use(session({
   store : new FileStore()
 }));
 
+app.use(passport.initialize());
+/*If the user is logged in, then what happens is that when the session is initiated again, you
+ recall that when you log in here, you will be logging in here, and a call to the passport
+  authenticate local, when this is done at the login stage, the passport authenticate local will 
+  automatically add the user property to the request message. So, it'll add req.user and then, 
+  the passport session that we have done here will automatically serialize that user information
+   and then store it in the session. So, and subsequently, whenever a incoming request comes in 
+   from the client side with the session cookie already in place, then this will automatically 
+   load the req.user onto the incoming request. So, that is how the passport session itself is 
+   organized.  */
+app.use(passport.session());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
@@ -56,10 +69,7 @@ app.use('/users', usersRouter);
 
 function auth(req,res,next)
 {
-  //session middleware will add session parameter to the request message
-  console.log(req.session);//to see what is comming from client side
-
-  if(!req.session.user/*user is a property of signed cookies*/)//if user is not authenticated by signed cookie yet then look for authorisation header
+  if(!req.user/*the req.user will be loaded in by the passport session middleware automatically*/)//if user is not authenticated by signed cookie yet then look for authorisation header
   {
       var err = new Error('You are not authenticated!');
       err.status = 403;//un-authorize user
@@ -67,15 +77,7 @@ function auth(req,res,next)
   }
   else//if user already exists
   {
-    if(req.session.user === 'authenticated')
-    {
-      next();
-    }
-    else{
-      var err = new Error('You are not authenticated!');
-      err.status = 403;
-      return next(err);
-    }
+    next();
   }
 }
 app.use(auth);//auth function which is added

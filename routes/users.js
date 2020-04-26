@@ -1,6 +1,7 @@
 var express = require('express');
 const bodyParser = require('body-Parser');
 var User = require('../models/users');
+var passport = require('passport');
 
 var router = express.Router();
 router.use(bodyParser.json());
@@ -20,84 +21,37 @@ router.post('/signup',(req,res,next) =>//sign new user within the system
   user with that username doesn't exist within the system. If the user with 
   that username exist, then you are trying to sign up a duplicate user and that should 
   not be allowed in the system.  */
-  User.findOne({username  : req.body.username})//checking the user with same user name
-  .then((user) => 
+
+
+  /* checking the user with same user name */
+  User.register(new User({username  : req.body.username}),req.body.password,(err,user) =>
   {
-    if(user != null)//if user exist with the user name
+    if(err)//handling error
     {
-       var err = new Error('User '+req.body.username+' already exists!');
-       err.status = 403;//forbidden
-       next(err);//calling the error handler
+      res.statusCode = 500;
+      res.setHeader('Content-Type','application/json');
+      res.json({err : err});/**construct a json object with the error as the value for the error property in there and then send this back */
     }
     else{
-      //letting new user to be signed up and return promise
-      return User.create({username : req.body.username,password : req.body.password});
+      passport.authenticate('local')(req,res ,() =>
+      {
+        res.statusCode = 200;
+        res.setHeader('Content-Type','application/json');
+        res.json({success : true,status : 'Registration Successfull!'});
+      });
     }
-  })
-  .then((user) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type','application/json');
-    res.json({status : 'Registration Successfull!', user : user});
-  },(err) => next(err))//if error in registration then call error handler
-  .catch((err) => next(err));
+  });
 });
 
 //login the user(using express sessions)
-router.post('/login',(req,res,next) =>
+/*If this is successful then this will come in and the next function that follows will be 
+executed. If there is any error in the authentication, this passport authenticate local will 
+automatically send back a reply to the client about the failure of the authentication.  */
+router.post('/login',passport.authenticate('local'),(req,res,next) =>
 {
-  if(!req.session.user/*user is a property of signed cookies*/)//if user is not authenticated by signed cookie yet then look for authorisation header
-  {
-    var authHeader = req.headers.authorization;//getting hold of authorization header
-    if(!authHeader)//if authHeader is null the we challenge the client
-    {
-      var err = new Error('You are not authenticated!');
-      res.setHeader('WWW-Authenticate','Basic');
-      err.status = 401;//un-authorize user
-      return next(err);//directly jumps to error handler and sends reply message back to client
-    }
-  
-    //authHeader is string so we split the value and give encoding of buffer i.e base64
-  /*[1] in below code means spliting the array into 2 parts ,1st contains basic and 2nd containf
-   username and pswd in base64 encoding formate*/
-   /*After we obtain username and pswd from second part if array and then we convert it into string
-    which is of formate username:pswd ,therefore we are again splitting it by colen to get seperate 
-    username and pswd*/
-      var auth = new Buffer.from(authHeader.split(' ')[1],'base64').toString().split(':');
-    //auth array contains two part username and pswd
-      var username = auth[0];
-      var password  = auth[1];
-  
-    //searching the user in the data base
-    User.findOne({username : username})
-    .then((user) =>{
-      if(user === null)//we coudn't find user with particular user name
-      {
-        var err = new Error('User '+username+' does not exists!');
-        err.status = 403;
-        return next(err);
-      }
-      else if(user.password !== password)
-      {
-        var err = new Error('Your Password is incorrect');
-        err.status = 401;//un-authorize user
-        return next(err);
-      }
-      else if(user.username === username && user.password === password)
-      {
-        req.session.user = 'authenticated';//setting user property on req session to user
-        res.statusCode = 200;
-        res.setHeader('Content-Type','text/plain');
-        res.end('You are Authenticated!');
-      }
-    })
-    .catch((err) => next(err));
-  }
-  else//user is already logged in earlier
-  {
-    res.statusCode = 200;
-    res.setHeader('Content-Type','text/plain');
-    res.end('You are already authenticated!');
-  }
+  res.statusCode = 200;
+  res.setHeader('Content-Type','application/json');
+  res.json({success : true,status : 'You are successfully logged in!'});
 });
 
 //logging out the user

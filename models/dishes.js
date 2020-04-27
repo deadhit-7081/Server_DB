@@ -18,9 +18,11 @@ const commentSchema = new Schema({
         type : String,
         required : true
     },
+
+    //we can populate this into dishes when required
     author :{
-        type : String,
-        required : true
+        type : mongoose.Schema.Types.ObjectId,//reference to user document
+        ref : 'User'//reference to user model
     }
 },{
     timestamps : true //automatically include time stamp of when it created and last updated

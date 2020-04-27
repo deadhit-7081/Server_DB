@@ -16,6 +16,11 @@ dishRouter.route('/')//we will mount this router in index.js as '/dishes'
 .get((req,res,next) =>
 {
     Dishes.find({})
+    /**when the dishes document has been constructed to send back the reply to the user, we're 
+     * going to populate the author field inside there from the user document in there. So, this 
+     * call to the populate will ensure that the other field will be populated with the 
+     * information as required.  */
+    .populate('comments.author')
     .then((dishes) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');//return in json format
@@ -50,9 +55,11 @@ dishRouter.route('/')//we will mount this router in index.js as '/dishes'
 })
 
 dishRouter.route('/:dishId')// mount this router in index.js as '/dishes/:dishId'
+
 .get((req,res,next) =>
 {
     Dishes.findById(req.params.dishId)//we already know that the dish ID is present in the params property.
+    .populate('comments.author')
     .then((dish) =>
     {
         res.statusCode = 200;
@@ -98,6 +105,7 @@ dishRouter.route('/:dishId/comments')//we will mount this router in index.js as 
 .get((req,res,next) =>
 {
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dish) => {
         if(dish != null)
         {
@@ -119,12 +127,18 @@ dishRouter.route('/:dishId/comments')//we will mount this router in index.js as 
     {
         if(dish != null)
         {
+            req.body.author = req.user._id;
             dish.comments.push(req.body);
             dish.save()//if save returned successfully then below line will execute
             .then((dish) => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');//return in json format
-                res.json(dish);//take input as string and send back to client
+                Dishes.findById(dish._id)
+                .populate('commnets.author')
+                .then((dish) =>
+                {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');//return in json format
+                    res.json(dish);//take input as string and send back to client
+                })
             }, (err) => next(err));
         }
         else{
@@ -168,6 +182,7 @@ dishRouter.route('/:dishId/comments')//we will mount this router in index.js as 
 dishRouter.route('/:dishId/comments/:commentId')
 .get((req,res,next) => {
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dish) => {
         if (dish != null && dish.comments.id(req.params.commentId) != null) {
             res.statusCode = 200;
@@ -204,9 +219,15 @@ dishRouter.route('/:dishId/comments/:commentId')
             }
             dish.save()
             .then((dish) => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(dish);                
+                Dishes.findById(dish._id)
+                .populate('comments.author')
+                .then((dish) =>
+                {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(dish);
+                })
+                
             }, (err) => next(err));
         }
         else if (dish == null) {

@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-Parser');
 var User = require('../models/users');
 var passport = require('passport');
+var authenticate = require('../authenticate');
 
 var router = express.Router();
 router.use(bodyParser.json());
@@ -49,9 +50,12 @@ executed. If there is any error in the authentication, this passport authenticat
 automatically send back a reply to the client about the failure of the authentication.  */
 router.post('/login',passport.authenticate('local'),(req,res,next) =>
 {
+
+  //create a token
+  var token = authenticate.getToken({_id : req.user._id});//once the token is created pass the token back to user
   res.statusCode = 200;
   res.setHeader('Content-Type','application/json');
-  res.json({success : true,status : 'You are successfully logged in!'});
+  res.json({success : true, token : token ,status : 'You are successfully logged in!'});
 });
 
 //logging out the user

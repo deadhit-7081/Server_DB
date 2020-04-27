@@ -6,7 +6,8 @@ var logger = require('morgan');
 var session = require('express-session');
 var FileStore = require('session-file-store')(session);
 var passport = require('passport');
-var suthenticate = require('./authenticate');
+var authenticate = require('./authenticate');
+var config = require('./config');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -17,7 +18,7 @@ var leaderRouter = require('./routes/leaderRouter');
 const mongoose = require('mongoose');//requiring mongoose to connect to database
 
 const Dishes = require('./models/dishes');//aquiring dishes which contains the schema or structure of dishes
-const url = 'mongodb://localhost:27017/conFusion';//connecting to server
+const url = config.mongoUrl;//connecting to server
 const connect = mongoose.connect(url);
 
 connect.then((db) =>
@@ -41,14 +42,7 @@ app.use(express.urlencoded({ extended: false }));
  encrypt the information and sign the cookie that is sent from the server to the client. */
 //app.use(cookieParser('12345-67890-09876-54321'));
 
-//using session insted of signed cookie
-app.use(session({
-  name : 'session-id',
-  secret : '12345-67890-09876-54321',
-  saveUninitialized : false,
-  resave : false,
-  store : new FileStore()
-}));
+
 
 app.use(passport.initialize());
 /*If the user is logged in, then what happens is that when the session is initiated again, you
@@ -60,27 +54,11 @@ app.use(passport.initialize());
    from the client side with the session cookie already in place, then this will automatically 
    load the req.user onto the incoming request. So, that is how the passport session itself is 
    organized.  */
-app.use(passport.session());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
-//Authentication Process
 
-function auth(req,res,next)
-{
-  if(!req.user/*the req.user will be loaded in by the passport session middleware automatically*/)//if user is not authenticated by signed cookie yet then look for authorisation header
-  {
-      var err = new Error('You are not authenticated!');
-      err.status = 403;//un-authorize user
-      return next(err);//directly jumps to error handler and sends reply message back to client
-  }
-  else//if user already exists
-  {
-    next();
-  }
-}
-app.use(auth);//auth function which is added
 
 app.use(express.static(path.join(__dirname, 'public')));//enable us to serve static data to public folder
 

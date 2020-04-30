@@ -18,8 +18,8 @@ var leaderRouter = require('./routes/leaderRouter');
 const mongoose = require('mongoose');//requiring mongoose to connect to database
 
 const Dishes = require('./models/dishes');//aquiring dishes which contains the schema or structure of dishes
-const url = config.mongoUrl;//connecting to server
-const connect = mongoose.connect(url);
+const url = config.mongoUrl;//url of server
+const connect = mongoose.connect(url);//establishing connection to the server
 
 connect.then((db) =>
 {
@@ -27,6 +27,23 @@ connect.then((db) =>
 },(err) => { console.log(err); });
 
 var app = express();
+
+//for all the request comming in we redirect the request to the secure server port
+
+app.all('*',(req,res,next) =>
+{
+  if(req.secure)//if incomming request is already secure request i.e at secure server port then the secure property in request is already set tp true
+  {
+    return next();//transfer to next middleware to handle it
+  }
+  else{
+    /** 307 here represents that the target resource resides temporarily under different URL.
+     *  And the user agent must not change the request method if it reforms in automatic 
+     * redirection to that URL. So, I'll be expecting user agent to retry with the same method 
+     * that they have used for the original end point. */
+    res.redirect(307, 'https://'+req.hostname+':'+app.get('secPort') + req.url);//req.url contains rest path except host name
+  }
+});
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

@@ -1,5 +1,7 @@
+
 const express = require('express');
 const bodyParser = require('body-parser');
+//using mongoose module to make connection with the server
 const mongoose = require('mongoose');
 const authenticate = require('../authenticate');
 
@@ -28,7 +30,7 @@ dishRouter.route('/')//we will mount this router in index.js as '/dishes'
     },(err) => next(err))
     .catch((err) => next(err));
 })
-.post(authenticate.verifyUser , (req,res,next) => {
+.post(authenticate.verifyUser ,authenticate.verifyAdmin, (req,res,next) => {
     Dishes.create(req.body)//body parser would have already parsed whatever is in the body of the message and loaded it onto the body property of the request. So, I'm just going to take the request body and then parse it in as a parameter to my dishes.create method and handle the return value. 
     .then((dish) =>
     {
@@ -39,11 +41,11 @@ dishRouter.route('/')//we will mount this router in index.js as '/dishes'
     },(err) => next(err))
     .catch((err) => next(err));
 })
-.put(authenticate.verifyUser,(req,res,next) => {
+.put(authenticate.verifyUser,authenticate.verifyAdmin,(req,res,next) => {
     res.statusCode = 403;//operation not supported
     res.end('PUT operation not supported on /dishes')
 })
-.delete(authenticate.verifyUser,(req,res,next) =>
+.delete(authenticate.verifyUser,authenticate.verifyAdmin,(req,res,next) =>
 {
     Dishes.remove({})
     .then((resp) => {
@@ -68,11 +70,11 @@ dishRouter.route('/:dishId')// mount this router in index.js as '/dishes/:dishId
     },(err) => next(err))
     .catch((err) => next(err));
 })
-.post(authenticate.verifyUser,(req,res,next) => {
+.post(authenticate.verifyUser,authenticate.verifyAdmin,(req,res,next) => {
     res.statusCode = 403;//operation not supported
     res.end('POST operation not supported on /dishes/' + req.params.dishId)
 })
-.put(authenticate.verifyUser,(req,res,next) => {
+.put(authenticate.verifyUser,authenticate.verifyAdmin,(req,res,next) => {
     Dishes.findByIdAndUpdate(req.params.dishId,{ 
         $set :req.body
     },{new :true /*return the updated value as json string*/})
@@ -84,7 +86,7 @@ dishRouter.route('/:dishId')// mount this router in index.js as '/dishes/:dishId
     },(err) => next(err))
     .catch((err) => next(err));
 })
-.delete(authenticate.verifyUser,(req,res,next) =>
+.delete(authenticate.verifyUser,authenticate.verifyAdmin,(req,res,next) =>
 {
     Dishes.findOneAndRemove(req.params.dishId)
     .then((resp) => {
@@ -156,28 +158,28 @@ dishRouter.route('/:dishId/comments')//we will mount this router in index.js as 
 .delete(authenticate.verifyUser,(req,res,next) =>
 {
     Dishes.findById(req.params.dishId)
-    .then((dish) => {
-        if(dish != null)
-        {
-            for(var i = (dish.comments.length -1); i>=0; i--)
+        .then((dish) => {
+            if(dish != null)
             {
-                dish.comments.id(dish.comments[i]._id).remove();
+                for(var i = (dish.comments.length -1); i>=0; i--) 
+                {
+                    dish.comments.id(dish.comments[i]._id).remove();
+                }
+                dish.save()//if save returned successfully then below line will execute
+                .then((dish) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');//return in json format
+                    res.json(dish);//take input as string and send back to client
+                },(err) => next(err));
             }
-            dish.save()//if save returned successfully then below line will execute
-            .then((dish) => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');//return in json format
-                res.json(dish);//take input as string and send back to client
-            },(err) => next(err));
-        }
-        else{
-            err = new Error('Dish '+ req.params.dishId+' not found!');//creating new error object
-            err.status = 404;
-            return next(err);
-        }
-           
-    },(err) => next(err))
-    .catch((err) => next(err));
+            else{
+                err = new Error('Dish '+ req.params.dishId+' not found!');//creating new error object
+                err.status = 404;
+                return next(err);
+            }
+               
+        },(err) => next(err))
+        .catch((err) => next(err));
 });
 dishRouter.route('/:dishId/comments/:commentId')
 .get((req,res,next) => {
@@ -246,9 +248,10 @@ dishRouter.route('/:dishId/comments/:commentId')
 .delete(authenticate.verifyUser,(req, res, next) => {
     Dishes.findById(req.params.dishId)
     .then((dish) => {
-        if (dish != null && dish.comments.id(req.params.commentId) != null) {
+        if (dish != null && dish.comments.id(req.params.commentId) != null
+         && dish.comments.id(req.params.commentId).author === (req.user._id)) {
             dish.comments.id(req.params.commentId).remove();
-            dish.save()
+            dish.save() 
             .then((dish) => {
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');

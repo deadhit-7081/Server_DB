@@ -4,7 +4,7 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy; 
 var User = require('./models/users');
 
-//create the jwt(json web token strategy)
+//create the jwt(json web token strategy) which is provided by passport-jwt node module
 var JwtStrategy = require('passport-jwt').Strategy;//This will provide us with a JSON Web Token based strategy for configuring our passport module
 
 var ExtractJwt = require('passport-jwt').ExtractJwt;
@@ -36,13 +36,16 @@ var opts = {};//options supplied for jwt strategy
 //extract JWT supports various methods for extracting information from the header
 opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
 //supply the secreat key
-opts.secretOrKey = config.secretKey;
+opts.secretOrKey = config.secretKey;//supply the secreat key which is used in signin
 
 /*whenever you have passport which you're configuring with a new strategy, you need to supply the 
 second parameter done. Through this done parameter, you will be passing back information to 
 passport which it will then use for loading things onto the request message. So, when passport 
 parses the request message, it will use the strategy and then extract information, and then load 
 it onto our request message.  */
+
+//this is passport strategy 
+//JwtStrategy takes two parameter 1-options 2-verify function
 exports.jwtPassport = passport.use(new JwtStrategy(opts, (jwt_payload,done) =>
 {
     console.log("Jwt Payload : ",jwt_payload);
@@ -71,3 +74,21 @@ exports.jwtPassport = passport.use(new JwtStrategy(opts, (jwt_payload,done) =>
  *  bearer token. If that is included, then that'll be extracted and that will be used to 
  * authenticate the user based upon the token. */
 exports.verifyUser = passport.authenticate('jwt',{session : false});
+
+exports.verifyAdmin = (req,res,next) =>
+{
+    User.findOne({_id : req.user._id})
+    .then((user) =>
+    {
+        if(req.user.admin)
+        {
+            next();
+        }
+        else {
+            err = new Error('You are not authorized to perform this operation! It is restricted to admin');
+            err.status = 403;
+            return next(err);
+        }
+    },(err) => next(err))
+    .catch((err) => next(err));
+}

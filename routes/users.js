@@ -4,12 +4,20 @@ var User = require('../models/users');
 var passport = require('passport');
 var authenticate = require('../authenticate');
 
+
 var router = express.Router();
 router.use(bodyParser.json());
 
 /* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+router.get('/',authenticate.verifyUser,authenticate.verifyAdmin, function(req, res, next) {
+  User.find({})
+  .then((user) =>
+  {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.json(user);
+  }, (err) => next(err))
+  .catch((err) => next(err));
 });
 
 //this signup route will allow a user to signup on the system
@@ -91,7 +99,7 @@ router.get('/logout',(req,res,next) =>
      res.redirect('/');//redirecting the user to standard page i.e Home page
   }
   else{
-    var err = new Error('You are not loggrd in!');
+    var err = new Error('You are not logged in!');
     err.status = 403;
     next(err);
   }

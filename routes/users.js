@@ -3,13 +3,13 @@ const bodyParser = require('body-Parser');
 var User = require('../models/users');
 var passport = require('passport');
 var authenticate = require('../authenticate');
-
+var cors = require('./cors');
 
 var router = express.Router();
 router.use(bodyParser.json());
 
 /* GET users listing. */
-router.get('/',authenticate.verifyUser,authenticate.verifyAdmin, function(req, res, next) {
+router.get('/',cors.corsWithOptions,authenticate.verifyUser,authenticate.verifyAdmin, function(req, res, next) {
   User.find({})
   .then((user) =>
   {
@@ -21,7 +21,7 @@ router.get('/',authenticate.verifyUser,authenticate.verifyAdmin, function(req, r
 });
 
 //this signup route will allow a user to signup on the system
-router.post('/signup',(req,res,next) =>//sign new user within the system
+router.post('/signup',cors.corsWithOptions,(req,res,next) =>//sign new user within the system
 {
   /* user method and the expectation is that for a user to sign up, the username 
   and password will be provided as a JSON string inside the body of the incoming 
@@ -74,7 +74,7 @@ router.post('/signup',(req,res,next) =>//sign new user within the system
 /*If this is successful then this will come in and the next function that follows will be 
 executed. If there is any error in the authentication, this passport authenticate local will 
 automatically send back a reply to the client about the failure of the authentication.  */
-router.post('/login',passport.authenticate('local'),(req,res,next) =>
+router.post('/login',cors.corsWithOptions,passport.authenticate('local'),(req,res,next) =>
 {
 
   //create a token
@@ -85,7 +85,7 @@ router.post('/login',passport.authenticate('local'),(req,res,next) =>
 });
 
 //logging out the user
-router.get('/logout',(req,res,next) =>
+router.get('/logout',cors.corsWithOptions,(req,res,next) =>
 {
   if(req.session)//if session exists i.e user is logged in
   {

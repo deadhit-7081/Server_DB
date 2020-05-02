@@ -17,7 +17,7 @@ promoRouter.route('/')//we will mount this router in index.js as '/promotions'
 
 .get(cors.cors,(req,res,next) =>
 {
-    Promotions.find({})
+    Promotions.find(req.query)
     .then((promo) =>
     {
         res.statusCode = 200;

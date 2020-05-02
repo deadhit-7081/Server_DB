@@ -6,28 +6,6 @@ require('mongoose-currency').loadType(mongoose);//loads the currency type into m
 const Currency = mongoose.Types.Currency;//currency type is added into mongoose so to use in defing the schema
 
 
-//creatind commentSchema
-const commentSchema = new Schema({
-    rating:{
-        type : Number,
-        min : 1,
-        max : 5,
-        required : true
-    },
-    comment : {
-        type : String,
-        required : true
-    },
-
-    //we can populate this into dishes when required
-    author :{
-        type : mongoose.Schema.Types.ObjectId,//reference to user document
-        ref : 'User'//reference to user model
-    }
-},{
-    timestamps : true //automatically include time stamp of when it created and last updated
-});
-
 //create dishSchema
 const dishSchema = new Schema({
     name :{
@@ -59,8 +37,7 @@ const dishSchema = new Schema({
     featured : {
         type :Boolean,
         default : false
-    },
-    comments : [commentSchema]
+    }
 },{
     timestamps : true //automatically include time stamp of when it created and last updated
 });

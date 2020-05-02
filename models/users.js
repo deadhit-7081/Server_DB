@@ -18,6 +18,8 @@ var User = new Schema({
         default : ''
     },
 
+    //facebookId stores the facebook Id of the user who is logging in
+    facebookId : String,
     //admin to test wether user is admin or normal user
     admin : {
         type : Boolean,

@@ -3,6 +3,7 @@
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy; 
 var User = require('./models/users');
+var FacebookTokenStrategy = require('passport-facebook-token');
 
 //create the jwt(json web token strategy) which is provided by passport-jwt node module
 var JwtStrategy = require('passport-jwt').Strategy;//This will provide us with a JSON Web Token based strategy for configuring our passport module
@@ -91,4 +92,42 @@ exports.verifyAdmin = (req,res,next) =>
         }
     },(err) => next(err))
     .catch((err) => next(err));
-}
+};
+
+exports.facebookPassport = passport.use(new FacebookTokenStrategy(
+    {
+    clientID  : config.facebook.clientId,
+    clientSecret : config.facebook.clientSecret
+    },(accessToken,refreshToken,profile,done) =>{
+        //finding the user if user has previously logged in using facebook approach
+        User.findOne({facebookId : profile.id},(err,user) =>
+        {
+            if(err)
+            {
+                return done(err,false);
+            }
+            if(!err && user !== null)
+            {
+                return done(null,user);
+            }
+            else
+            {
+                //creating new user
+                user = new User({username : profile.displayName});
+                user.facebookId = profile.id;
+                user.firstname = profile.name.givenName;
+                user.lastname = profile.name.familyName;
+                user.save((err,user) =>
+                {
+                    if(err)
+                    {
+                        return done(err,false);
+                    }
+                    else{
+                        return done(null,user);
+                    }
+                });
+            }
+        });
+    }
+));
